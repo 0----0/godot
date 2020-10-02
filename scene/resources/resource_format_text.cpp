@@ -486,11 +486,23 @@ Error ResourceInteractiveLoaderText::poll() {
 
 		String path = local_path + "::" + itos(id);
 
-		//bool exists=ResourceCache::has(path);
-
 		Ref<Resource> res;
 
-		if (!ResourceCache::has(path)) { //only if it doesn't exist
+		bool exists = ResourceCache::has(path);
+		bool override = false;
+
+		if (exists) {
+
+			Resource *r = ResourceCache::get(path);
+
+			if (r && r->is_class(type)) {
+				res.reference_ptr(r);
+			} else {
+				override = true; //if it's cached, but the wrong type, regenerate
+			}
+		}
+
+		if (!exists || override) { //only if it doesn't exist or needs to be remade
 
 			Object *obj = ClassDB::instance(type);
 			if (!obj) {
@@ -512,7 +524,7 @@ Error ResourceInteractiveLoaderText::poll() {
 
 			res = Ref<Resource>(r);
 			resource_cache.push_back(res);
-			res->set_path(path);
+			res->set_path(path, override);
 		}
 
 		resource_current++;
